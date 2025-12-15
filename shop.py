@@ -14,6 +14,10 @@ shop = [
     {'id': 10, 'product_name': 'Soap', 'price': 50, 'quantity': 20},
 ]
 
+# Initialize the shop 
+if "shop" not in st.session_state:
+    st.session_state.shop = shop
+
 # Initialize the cart
 if "cart" not in st.session_state:
     st.session_state.cart = []
@@ -22,7 +26,7 @@ if "cart" not in st.session_state:
 def show_products():
     st.subheader("**Available Products**")
     st.write('---------------------------------------------')
-    for product in shop:
+    for product in st.session_state.shop:
         st.markdown(
             f"""
             ● ID: {product['id']}  
@@ -33,22 +37,28 @@ def show_products():
         )
 
 def add_to_cart(cart, product_id, quantity):
-    for product in shop:
+    for product in st.session_state.shop:
         if product['id'] == product_id:
-            if quantity <= product['quantity']:
-                cart.append({
-                    'id': product['id'],
-                    'product_name': product['product_name'],
-                    'price': product['price'],
-                    'quantity': quantity
-                })
-                product['quantity'] -= quantity
-                st.success(f"{quantity} × {product['product_name']} added to cart!")
-                return
-            else:
+            if quantity > product['quantity']:
                 st.error("Not enough stock available")
                 return
-    st.error("Invalid Product ID")
+
+            for item in cart:
+                if item['id'] == product_id:
+                    item['quantity'] += quantity
+                    product['quantity'] -= quantity
+                    st.success(f"{quantity} × {product['product_name']} added (updated in cart)")
+                    return
+                
+            cart.append({
+                'id': product['id'],
+                'product_name': product['product_name'],
+                'price': product['price'],
+                'quantity': quantity
+            })
+            product['quantity'] -= quantity
+            st.success(f"{quantity} × {product['product_name']} added to cart!")
+            return
 
 def view_cart(cart):
     st.subheader("🛒 Your Cart")
@@ -62,9 +72,15 @@ def view_cart(cart):
 def remove_from_cart(cart, product_id):
     for item in cart:
         if item['id'] == product_id:
+            for product in st.session_state.shop:
+                if product['id'] == product_id:
+                    product['quantity'] += item['quantity']
+                    break
+
             cart.remove(item)
-            st.success("Item removed from cart")
+            st.success("Item removed and stock restored")
             return
+
     st.error("Item not found in cart")
 
 def calculate_total(cart):
